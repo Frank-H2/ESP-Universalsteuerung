@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ESP32 Steuerung</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; text-align: center; }
+        .container { width: 80%; margin: 0 auto; }
+        .box { 
+            margin: 10px auto; 
+            padding: 10px; 
+            border: 1px solid #ddd; 
+            width: 90%; 
+            max-width: 800px; 
+        }
+        .horizontal-line { 
+            border-bottom: 2px solid #ddd; 
+            width: 90%; 
+            margin: 10px auto; 
+        }
+        .row-boxes { 
+            display: flex; 
+            justify-content: center; 
+            gap: 20px; 
+            flex-wrap: wrap; 
+        }
+        .single-box { 
+            flex: 1; 
+            min-width: 150px; 
+            max-width: 200px; 
+            width: 30%; 
+        }
+        .element-container { 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            margin: 10px; 
+        }
+        .label { 
+            font-weight: bold; 
+            margin-bottom: 5px; 
+        }
+        table { 
+            border-collapse: collapse; 
+            width: 100%; 
+            max-width: 600px; 
+        }
+        td, th { 
+            border: 1px solid #ddd; 
+            padding: 8px; 
+            text-align: center; 
+        }
+        .switch { 
+            display: inline-block; 
+            width: 60px; 
+            height: 34px; 
+            position: relative; 
+        }
+        .switch input { 
+            opacity: 0; 
+            width: 0; 
+            height: 0; 
+        }
+        .slider { 
+            position: absolute; 
+            cursor: pointer; 
+            top: 0; 
+            left: 0; 
+            right: 0; 
+            bottom: 0; 
+            background-color: #ccc; 
+            transition: .4s; 
+        }
+        .slider:before { 
+            position: absolute; 
+            content: ""; 
+            height: 26px; 
+            width: 26px; 
+            left: 4px; 
+            bottom: 4px; 
+            background-color: white; 
+            transition: .4s; 
+        }
+        input:checked + .slider { 
+            background-color: #2196F3; 
+        }
+        input:checked + .slider:before { 
+            transform: translateX(26px); 
+        }
+        .led { 
+            width: 30px; /* Erhöht auf 30px von 20px */
+            height: 30px; /* Erhöht auf 30px von 20px */
+            background-color: grey; 
+            display: inline-block; 
+        }
+        .servo { 
+            width: 60px; 
+            text-align: center; 
+        }
+        .analog { 
+            width: 60px; 
+            text-align: center; 
+        }
+    </style>
+    <script>
+        function toggleSwitch(id, state) {
+            fetch('/toggle?switch=' + id + '&state=' + (state ? 'on' : 'off'));
+        }
+
+        function setServo(servo, pos) {
+            fetch('/servo?servo=' + servo + '&pos=' + pos);
+        }
+
+        function refreshStatus() {
+            fetch('/input_status')
+                .then(response => response.json())
+                .then(data => {
+                    for (let i = 1; i <= 5; i++) {
+                        document.getElementById('input' + i).style.backgroundColor = data[i] ? 'green' : 'red';
+                    }
+                });
+            fetch('/analog_status')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('analog1').value = data.analog1;
+                    document.getElementById('analog2').value = data.analog2;
+                });
+        }
+
+        setInterval(refreshStatus, 10000);
+        
+        function executeChain() {
+            fetch('/execute_chain')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('chainStatus').innerText = 'Status: Wird ausgeführt';
+                });
+        }
+
+        function abortChain() {
+            fetch('/abort_chain')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('chainStatus').innerText = 'Status: Abgebrochen';
+                });
+        }
+    </script>
+</head>
+<body onload="refreshStatus()">
+    <h1>ESP32 Steuerung</h1>
+    <div class="container">
+        <!-- Erste Reihe: Eingänge -->
+        <div class="box">
+            <h3>Eingang</h3>
+            <div style="display: flex; justify-content: center; flex-wrap: wrap; gap: 20px;">
+                <div class="element-container"><span class="label">1</span><div class="led" id="input1"></div></div>
+                <div class="element-container"><span class="label">2</span><div class="led" id="input2"></div></div>
+                <div class="element-container"><span class="label">3</span><div class="led" id="input3"></div></div>
+                <div class="element-container"><span class="label">4</span><div class="led" id="input4"></div></div>
+                <div class="element-container"><span class="label">5</span><div class="led" id="input5"></div></div>
+            </div>
+        </div>
+
+        <div class="horizontal-line"></div>
+
+        <!-- Zweite Reihe: Relais -->
+        <div class="box">
+            <h3>Relais</h3>
+            <div style="display: flex; justify-content: center; flex-wrap: wrap; gap: 20px;">
+                <div class="element-container"><span class="label">1</span><label class="switch"><input type="checkbox" onchange="toggleSwitch(1, this.checked)"><span class="slider"></span></label></div>
+                <div class="element-container"><span class="label">2</span><label class="switch"><input type="checkbox" onchange="toggleSwitch(2, this.checked)"><span class="slider"></span></label></div>
+                <div class="element-container"><span class="label">3</span><label class="switch"><input type="checkbox" onchange="toggleSwitch(3, this.checked)"><span class="slider"></span></label></div>
+                <div class="element-container"><span class="label">4</span><label class="switch"><input type="checkbox" onchange="toggleSwitch(4, this.checked)"><span class="slider"></span></label></div>
+                <div class="element-container"><span class="label">5</span><label class="switch"><input type="checkbox" onchange="toggleSwitch(5, this.checked)"><span class="slider"></span></label></div>
+                <div class="element-container"><span class="label">6</span><label class="switch"><input type="checkbox" onchange="toggleSwitch(6, this.checked)"><span class="slider"></span></label></div>
+                <div class="element-container"><span class="label">7</span><label class="switch"><input type="checkbox" onchange="toggleSwitch(7, this.checked)"><span class="slider"></span></label></div>
+                <div class="element-container"><span class="label">8</span><label class="switch"><input type="checkbox" onchange="toggleSwitch(8, this.checked)"><span class="slider"></span></label></div>
+            </div>
+        </div>
+
+        <div class="horizontal-line"></div>
+
+        <!-- Dritte Reihe: Zylinder -->
+        <div class="box">
+            <h3>Zylinder</h3>
+            <div style="display: flex; justify-content: center; flex-wrap: wrap; gap: 20px;">
+                <div class="element-container"><span class="label">Z+1</span><label class="switch"><input type="checkbox" onchange="toggleSwitch('Z+1', this.checked)"><span class="slider"></span></label></div>
+                <div class="element-container"><span class="label">Z-1</span><label class="switch"><input type="checkbox" onchange="toggleSwitch('Z-1', this.checked)"><span class="slider"></span></label></div>
+                <div class="element-container"><span class="label">Z+2</span><label class="switch"><input type="checkbox" onchange="toggleSwitch('Z+2', this.checked)"><span class="slider"></span></label></div>
+                <div class="element-container"><span class="label">Z-2</span><label class="switch"><input type="checkbox" onchange="toggleSwitch('Z-2', this.checked)"><span class="slider"></span></label></div>
+            </div>
+        </div>
+
+        <div class="horizontal-line"></div>
+
+        <!-- Vierte Reihe: Servo 1, Analoge Eingänge, Servo 2 -->
+        <div class="box row-boxes">
+            <div class="single-box">
+                <h3>Servo 1</h3>
+                <table>
+                    <tr>
+                        <th>1</th>
+                        <td><input type="number" class="servo" min="0" max="180" value="90" onchange="setServo(1, this.value)"></td>
+                    </tr>
+                </table>
+            </div>
+            <div class="single-box">
+                <h3>Analog</h3>
+                <table>
+                    <tr>
+                        <th>1</th>
+                        <td><input type="text" class="analog" id="analog1" readonly></td>
+                    </tr>
+                    <tr>
+                        <th>2</th>
+                        <td><input type="text" class="analog" id="analog2" readonly></td>
+                    </tr>
+                </table>
+            </div>
+            <div class="single-box">
+                <h3>Servo 2</h3>
+                <table>
+                    <tr>
+                        <th>2</th>
+                        <td><input type="number" class="servo" min="0" max="180" value="90" onchange="setServo(2, this.value)"></td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="horizontal-line"></div>
+
+        <!-- Schrittketten -->
+        <div class="box">
+            <h2>Schrittketten</h2>
+            <div id="chainControl">
+                <button onclick="executeChain()">Start</button>
+                <button onclick="abortChain()">Abbrechen</button>
+                <p id="chainStatus">Status: Bereit</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
